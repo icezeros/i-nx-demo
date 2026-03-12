@@ -1,3 +1,3 @@
 export function webApp(): string {
-  return 'web-app';
+  return 'web-app-hotfix';
 }
