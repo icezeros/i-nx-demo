@@ -2,7 +2,11 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
-    "production": ["default"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json"
+    ],
     "sharedGlobals": []
   },
   "plugins": [
@@ -19,6 +23,98 @@
           "watchDepsName": "watch-deps"
         }
       }
+    },
+    {
+      "plugin": "@nx/vitest",
+      "options": {
+        "testTargetName": "test",
+        "ciTargetName": "test-ci",
+        "testMode": "watch"
+      }
     }
-  ]
+  ],
+  "release": {
+    "version": {
+      "preVersionCommand": "npx nx run-many -t build"
+    },
+    "groups": {
+      "platform-packages": {
+        "projectsRelationship": "fixed",
+        "projects": ["@myorg/core", "@myorg/utils", "@myorg-internal/helpers"],
+        "releaseTag": {
+          "pattern": "platform-v{version}"
+        },
+        "version": {
+          "conventionalCommits": true,
+          "specifierSource": "conventional-commits",
+          "currentVersionResolver": "git-tag",
+          "fallbackCurrentVersionResolver": "disk",
+          "firstRelease": true
+        },
+        "conventionalCommits": {
+          "useCommitScope": false,
+          "types": {
+            "feat": { "semverBump": "major", "changelog": true },
+            "fix": { "semverBump": "patch", "changelog": true },
+            "perf": { "semverBump": "patch", "changelog": true },
+            "docs": false,
+            "style": false,
+            "chore": false,
+            "refactor": false,
+            "test": false,
+            "ci": false,
+            "build": false
+          }
+        },
+        "changelog": {
+          "workspaceChangelog": false,
+          "projectChangelogs": true,
+          "automaticFromRef": true
+        }
+      },
+      "client-applications": {
+        "projectsRelationship": "fixed",
+        "projects": [
+          "@myorg/web-app",
+          "@myorg/mobile-app",
+          "@myorg-internal/admin-portal"
+        ],
+        "releaseTag": {
+          "pattern": "client-v{version}"
+        },
+        "version": {
+          "conventionalCommits": true,
+          "specifierSource": "conventional-commits",
+          "currentVersionResolver": "git-tag",
+          "fallbackCurrentVersionResolver": "disk",
+          "firstRelease": true
+        },
+        "conventionalCommits": {
+          "useCommitScope": false,
+          "types": {
+            "feat": { "semverBump": "major", "changelog": true },
+            "fix": { "semverBump": "patch", "changelog": true },
+            "perf": { "semverBump": "patch", "changelog": true },
+            "docs": false,
+            "style": false,
+            "chore": false,
+            "refactor": false,
+            "test": false,
+            "ci": false,
+            "build": false
+          }
+        },
+        "changelog": {
+          "workspaceChangelog": false,
+          "projectChangelogs": true,
+          "automaticFromRef": true
+        }
+      }
+    }
+  },
+  "targetDefaults": {
+    "test": {
+      "dependsOn": ["^build"]
+    }
+  }
 }

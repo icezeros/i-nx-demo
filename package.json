@@ -2,20 +2,49 @@
   "name": "@my-monorepo/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "prepare": "husky",
+    "release:platform": "nx release --groups platform-packages",
+    "release:client": "nx release --groups client-applications",
+    "release:dry": "nx release --groups platform-packages,client-applications --dry-run",
+    "local-registry": "nx local-registry"
+  },
   "private": true,
-  "dependencies": {},
   "devDependencies": {
+    "@commitlint/cli": "^20.4.3",
+    "@commitlint/config-conventional": "^20.4.3",
     "@nx/js": "22.5.4",
+    "@nx/vitest": "22.5.4",
     "@swc-node/register": "~1.11.1",
     "@swc/core": "~1.15.5",
     "@swc/helpers": "~0.5.18",
+    "@types/node": "20.19.9",
+    "@vitest/coverage-v8": "^4.0.0",
+    "husky": "^9.1.7",
     "nx": "22.5.4",
     "prettier": "~3.6.2",
     "tslib": "^2.3.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "verdaccio": "^6.0.5",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.8"
   },
   "workspaces": [
-    "packages/*"
-  ]
+    "packages/*",
+    "apps/*",
+    "tools/*"
+  ],
+  "nx": {
+    "includedScripts": [],
+    "targets": {
+      "local-registry": {
+        "executor": "@nx/js:verdaccio",
+        "options": {
+          "port": 4873,
+          "config": ".verdaccio/config.yml",
+          "storage": "tmp/local-registry/storage"
+        }
+      }
+    }
+  }
 }

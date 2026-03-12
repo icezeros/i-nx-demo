@@ -2,5 +2,27 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/utils"
+    },
+    {
+      "path": "./packages/internal-helpers"
+    },
+    {
+      "path": "./apps/web-app"
+    },
+    {
+      "path": "./apps/mobile-app"
+    },
+    {
+      "path": "./apps/admin-portal"
+    },
+    {
+      "path": "./tools/build-scripts"
+    }
+  ]
 }
