@@ -37,6 +37,25 @@
     "version": {
       "preVersionCommand": "npx nx run-many -t build"
     },
+    "conventionalCommits": {
+      "types": {
+        "feat": { "semverBump": "major", "changelog": true },
+        "fix": { "semverBump": "patch", "changelog": true },
+        "perf": { "semverBump": "patch", "changelog": true },
+        "docs": false,
+        "style": false,
+        "chore": false,
+        "refactor": false,
+        "test": false,
+        "ci": false,
+        "build": false
+      }
+    },
+    "changelog": {
+      "workspaceChangelog": false,
+      "projectChangelogs": true,
+      "automaticFromRef": true
+    },
     "groups": {
       "platform-packages": {
         "projectsRelationship": "fixed",
@@ -45,31 +64,9 @@
           "pattern": "platform-v{version}"
         },
         "version": {
-          "conventionalCommits": true,
           "specifierSource": "conventional-commits",
           "currentVersionResolver": "git-tag",
-          "fallbackCurrentVersionResolver": "disk",
-          "firstRelease": true
-        },
-        "conventionalCommits": {
-          "useCommitScope": false,
-          "types": {
-            "feat": { "semverBump": "major", "changelog": true },
-            "fix": { "semverBump": "patch", "changelog": true },
-            "perf": { "semverBump": "patch", "changelog": true },
-            "docs": false,
-            "style": false,
-            "chore": false,
-            "refactor": false,
-            "test": false,
-            "ci": false,
-            "build": false
-          }
-        },
-        "changelog": {
-          "workspaceChangelog": false,
-          "projectChangelogs": true,
-          "automaticFromRef": true
+          "fallbackCurrentVersionResolver": "disk"
         }
       },
       "client-applications": {
@@ -83,31 +80,9 @@
           "pattern": "client-v{version}"
         },
         "version": {
-          "conventionalCommits": true,
           "specifierSource": "conventional-commits",
           "currentVersionResolver": "git-tag",
-          "fallbackCurrentVersionResolver": "disk",
-          "firstRelease": true
-        },
-        "conventionalCommits": {
-          "useCommitScope": false,
-          "types": {
-            "feat": { "semverBump": "major", "changelog": true },
-            "fix": { "semverBump": "patch", "changelog": true },
-            "perf": { "semverBump": "patch", "changelog": true },
-            "docs": false,
-            "style": false,
-            "chore": false,
-            "refactor": false,
-            "test": false,
-            "ci": false,
-            "build": false
-          }
-        },
-        "changelog": {
-          "workspaceChangelog": false,
-          "projectChangelogs": true,
-          "automaticFromRef": true
+          "fallbackCurrentVersionResolver": "disk"
         }
       }
     }
