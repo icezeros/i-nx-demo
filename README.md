@@ -1,10 +1,109 @@
+# Monorepo 自动化版本管理示例（Nx Release）
+
+<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+
+这个仓库是一个 **Nx Monorepo** 示例，用于演示：
+
+- **两组独立版本线**
+  - **platform**：`packages/*` 固定版本（统一版本号）
+  - **client**：`apps/*` 固定版本（统一版本号）
+- **基于 Conventional Commits 自动推导版本号（自定义：`feat -> major`）**
+- **按项目（文件夹）生成独立 `CHANGELOG.md`**
+- **公有包/私有包分 registry 发布**
+- `tools/*` 为本地工具（`"private": true`），**不参与发版**
+
+更完整的说明见 `USAGE.zh-CN.md`。
+
+## 目录结构
+
+```
+packages/                 # platform 组（统一版本）
+  core/                   # public
+  utils/                  # public
+  internal-helpers/       # restricted + private registry
+apps/                     # client 组（统一版本）
+  web-app/                # public
+  mobile-app/             # public
+  admin-portal/           # restricted + private registry
+tools/                    # 不参与发版（private）
+  build-scripts/
+```
+
+## 常用命令
+
+安装依赖：
+
+```sh
+npm i
+```
+
+查看项目图：
+
+```sh
+npx nx graph
+```
+
+运行任意 target（Nx 通用）：
+
+```sh
+npx nx <target> <project-name>
+```
+
+例如构建某个项目：
+
+```sh
+npx nx build @myorg/core
+```
+
+## 发版（Nx Release）
+
+> 建议先 dry-run 确认会发生什么，再执行真实发版。
+
+- platform 组 dry-run：
+
+```sh
+npm run release:platform -- --dry-run
+```
+
+- client 组 dry-run：
+
+```sh
+npm run release:client -- --dry-run
+```
+
+对应的 git tag 格式：
+
+- platform：`platform-v{version}`
+- client：`client-v{version}`
+
+## 提交规范（必需）
+
+仓库已启用 commit-msg 钩子（commitlint），提交信息必须符合 Conventional Commits，例如：
+
+- `feat: xxx` → **major**
+- `fix: xxx` → **patch**
+- `docs/style/chore` → 不触发版本变化
+- `BREAKING CHANGE:`（或 `feat!:`）→ **major**
+
+## CI（GitHub Actions）
+
+工作流：`.github/workflows/release.yml`
+
+支持手动选择 release group（`platform-packages` / `client-applications`）执行版本、changelog、tag、publish。
+
+## 参考链接
+
+- [Nx Release](https://nx.dev/features/manage-releases)
+- [运行任务（Run tasks）](https://nx.dev/features/run-tasks)
+- [Nx on CI](https://nx.dev/ci/intro/ci-with-nx)
+
 # MyMonorepo
 
 <a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
 
 ✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
 
 ## Generate a library
 
@@ -97,12 +196,13 @@ Nx Console is an editor extension that enriches your developer experience. It le
 
 Learn more:
 
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
+- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
 - [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
 - [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
 - [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
 
 And join the Nx community:
+
 - [Discord](https://go.nx.dev/community)
 - [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
 - [Our Youtube channel](https://www.youtube.com/@nxdevtools)
