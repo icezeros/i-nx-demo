@@ -7,7 +7,7 @@
 - **两组独立版本线**
   - **platform**：`packages/*` 固定版本（统一版本号）
   - **client**：`apps/*` 固定版本（统一版本号）
-- **基于 Conventional Commits 自动推导版本号（自定义：`feat -> major`）**
+- **基于 Conventional Commits 自动推导版本号（自定义：`feat -> minor`）**
 - **按项目（文件夹）生成独立 `CHANGELOG.md`**
 - **公有包/私有包分 registry 发布**
 - `tools/*` 为本地工具（`"private": true`），**不参与发版**
@@ -78,7 +78,7 @@ npx nx build @myorg/core
 
 仓库已启用 commit-msg 钩子（commitlint），提交信息必须符合 Conventional Commits，例如：
 
-- `feat: xxx` → **major**
+- `feat: xxx` → **minor**
 - `fix: xxx` → **patch**
 - `docs/style/chore` → 不触发版本变化
 - `BREAKING CHANGE:`（或 `feat!:`）→ **major**

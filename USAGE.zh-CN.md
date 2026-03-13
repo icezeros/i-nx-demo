@@ -5,7 +5,7 @@
 - 两组独立版本线
   - **platform**：`packages/*`（统一版本）
   - **client**：`apps/*`（统一版本）
-- **按 Conventional Commits 自动推导版本号（自定义规则：feat=major）**
+- **按 Conventional Commits 自动推导版本号（自定义规则：feat=minor）**
 - **按项目（文件夹/包）生成独立 `CHANGELOG.md`**
 - **公有包发 npmjs.org / 私有包发私有 registry / `tools/*` 不发版**
 - **Commitlint 强制校验提交信息**
@@ -29,7 +29,7 @@ tools/                    # 不参与发版（private）
 
 本仓库开启了 commit-msg 钩子，提交信息必须符合 Conventional Commits，例如：
 
-- `feat: add new api`（会触发 **major**）
+- `feat: add new api`（会触发 **minor**）
 - `fix: correct typo`（会触发 **patch**）
 - `docs: update readme`（不触发版本变化）
 - `feat!: breaking change` 或 body 含 `BREAKING CHANGE:`（触发 **major**）

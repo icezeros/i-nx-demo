@@ -39,7 +39,7 @@
     },
     "conventionalCommits": {
       "types": {
-        "feat": { "semverBump": "major", "changelog": true },
+        "feat": { "semverBump": "minor", "changelog": true },
         "fix": { "semverBump": "patch", "changelog": true },
         "perf": { "semverBump": "patch", "changelog": true },
         "docs": false,
