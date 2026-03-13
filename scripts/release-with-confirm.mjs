@@ -25,7 +25,7 @@ function run(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       stdio: opts.capture ? 'pipe' : 'inherit',
-      shell: true,
+      shell: false,
       ...opts,
     });
     let stdout = '';
@@ -50,6 +50,23 @@ function parseSuggestedVersion(stdout) {
   return m ? m[1] : null;
 }
 
+// 从 dry-run 输出中截取 Changelog 预览（Previewing an entry ... 到 Running target 之前）
+function extractChangelogPreview(stdout) {
+  const start = stdout.indexOf('Previewing an entry in');
+  if (start === -1) return '';
+  const end =
+    stdout.indexOf('Running target nx-release-publish') !== -1
+      ? stdout.indexOf('Running target nx-release-publish')
+      : stdout.indexOf('NOTE: The "dryRun"');
+  if (end === -1) return stdout.slice(start).trim();
+  let block = stdout.slice(start, end).trim();
+  // 去掉行首的 "+ "，便于阅读
+  return block
+    .split('\n')
+    .map((line) => (line.startsWith('+ ') ? line.slice(2) : line))
+    .join('\n');
+}
+
 async function main() {
   console.log(`\n正在计算建议版本（dry-run）: --groups ${group}\n`);
   const { code, stdout } = await run(
@@ -69,13 +86,21 @@ async function main() {
     process.exit(1);
   }
 
+  const changelogPreview = extractChangelogPreview(stdout);
+  if (changelogPreview) {
+    console.log('\n--- 生成的 Changelog 预览 ---\n');
+    console.log(changelogPreview);
+    console.log('\n--- 确认版本 ---');
+  } else {
+    console.log('\n--- 确认版本 ---');
+  }
+
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
   const ask = (q) => new Promise((res) => rl.question(q, res));
 
-  console.log('\n--- 确认版本 ---');
   const answer = await ask(
     `建议版本: ${suggested}\n` +
       `  [Enter/Y] 使用建议版本并执行发版\n` +
