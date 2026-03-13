@@ -36,16 +36,27 @@ tools/                    # 不参与发版（private）
 
 ## 本地发版命令
 
-> 先用 dry-run 看会发生什么，再执行真实发版。
+### 方式一：先确认再发版（推荐）
+
+先根据 commits 算出版本，展示给你确认，可原样采用或**手动改成别的版本号**后再执行：
+
+- platform 组：`npm run release:platform:confirm`
+- client 组：`npm run release:client:confirm`
+
+流程：dry-run 计算建议版本 → 终端提示「建议版本: x.y.z」→ 回车即用该版本发版，或输入新版本号（如 `1.2.0`）后发版。
+
+### 方式二：直接发版 / 仅预览
 
 - platform 组：
-  - `npm run release:platform -- --dry-run`
-  - `npm run release:platform`
+  - `npm run release:platform -- --dry-run`（只预览）
+  - `npm run release:platform`（直接发版，无确认）
 - client 组：
   - `npm run release:client -- --dry-run`
   - `npm run release:client`
-- 两组一起 dry-run：
-  - `npm run release:dry`
+- 两组一起 dry-run：`npm run release:dry`
+
+**手动指定版本**（覆盖自动计算）：  
+`npx nx release --groups platform-packages 2.0.0 --yes`
 
 Nx Release 会做：
 

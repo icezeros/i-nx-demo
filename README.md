@@ -57,19 +57,17 @@ npx nx build @myorg/core
 
 ## 发版（Nx Release）
 
-> 建议先 dry-run 确认会发生什么，再执行真实发版。
+**推荐：先算出版本再确认/手动改版本后发版**
 
-- platform 组 dry-run：
+- platform：`npm run release:platform:confirm`
+- client：`npm run release:client:confirm`
 
-```sh
-npm run release:platform -- --dry-run
-```
+会先 dry-run 得到建议版本，提示你确认或输入新版本号后再执行。
 
-- client 组 dry-run：
+仅预览（不写回）：
 
-```sh
-npm run release:client -- --dry-run
-```
+- platform：`npm run release:platform -- --dry-run`
+- client：`npm run release:client -- --dry-run`
 
 对应的 git tag 格式：
 
