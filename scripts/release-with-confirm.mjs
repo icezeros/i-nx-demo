@@ -10,6 +10,7 @@
  */
 
 import { spawn } from 'child_process';
+import inquirer from 'inquirer';
 import * as readline from 'readline';
 
 const group = process.argv[2];
@@ -48,6 +49,38 @@ function parseSuggestedVersion(stdout) {
     stdout.match(/(?:get new version|New version)\s+(\d+\.\d+\.\d+)/i) ||
     stdout.match(/version\s+(\d+\.\d+\.\d+)\s+written/i);
   return m ? m[1] : null;
+}
+
+// 从 dry-run 输出中解析当前版本号
+function parseCurrentVersion(stdout) {
+  const m =
+    stdout.match(/current version\s+(\d+\.\d+\.\d+)/i) ||
+    stdout.match(/version\s+(\d+\.\d+\.\d+)\s+already resolved/i);
+  return m ? m[1] : null;
+}
+
+// 基于当前版本计算 patch/minor/major 建议版本
+function bumpVersion(current, type) {
+  const parts = current.split('.').map((n) => Number.parseInt(n, 10));
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+  let [maj, min, pat] = parts;
+  switch (type) {
+    case 'patch':
+      pat += 1;
+      break;
+    case 'minor':
+      min += 1;
+      pat = 0;
+      break;
+    case 'major':
+      maj += 1;
+      min = 0;
+      pat = 0;
+      break;
+    default:
+      return null;
+  }
+  return `${maj}.${min}.${pat}`;
 }
 
 // 从 dry-run 输出中截取 Changelog 预览（Previewing an entry ... 到 Running target 之前）
@@ -95,30 +128,58 @@ async function main() {
     console.log('\n--- 确认版本 ---');
   }
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
+  const current = parseCurrentVersion(stdout);
+  if (current) {
+    console.log(`当前版本: ${current}`);
+    console.log(`建议版本(按提交计算): ${suggested}`);
+  }
+
+  // 构建 inquirer 的 choices：{ name, value }，name 为展示文案
+  const choices = [];
+  if (current) {
+    const patch = bumpVersion(current, 'patch');
+    const minor = bumpVersion(current, 'minor');
+    const major = bumpVersion(current, 'major');
+    if (patch) choices.push({ name: `patch  →  ${patch}`, value: patch });
+    if (minor) choices.push({ name: `minor  →  ${minor}`, value: minor });
+    if (major) choices.push({ name: `major  →  ${major}`, value: major });
+  }
+  choices.push({
+    name: `使用建议版本  ${suggested}`,
+    value: suggested,
   });
-  const ask = (q) => new Promise((res) => rl.question(q, res));
+  choices.push(new inquirer.Separator());
+  choices.push({ name: '自定义版本号（输入）', value: '__custom__' });
+  choices.push({ name: '取消', value: '__cancel__' });
 
-  const answer = await ask(
-    `建议版本: ${suggested}\n` +
-      `  [Enter/Y] 使用建议版本并执行发版\n` +
-      `  [n]       取消\n` +
-      `  或输入新版本号 (如 1.2.0): `,
-  );
-  rl.close();
+  // inquirer 13 的箭头列表类型为 select（不是 list），才能正确渲染选项
+  const { choice } = await inquirer.prompt([
+    {
+      type: 'select',
+      name: 'choice',
+      message: '请用 上下箭头 选择本次要发布的版本，Enter 确认：',
+      choices,
+      default: suggested,
+      pageSize: 15,
+      loop: true,
+    },
+  ]);
 
-  const trimmed = answer.trim().toLowerCase();
-  if (trimmed === 'n' || trimmed === 'no') {
+  if (choice === '__cancel__') {
     console.log('已取消。');
     process.exit(0);
   }
 
-  const version =
-    trimmed === '' || trimmed === 'y' || trimmed === 'yes'
-      ? suggested
-      : trimmed;
+  let version = choice;
+  if (choice === '__custom__') {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    const ask = (q) => new Promise((res) => rl.question(q, res));
+    version = (await ask('输入版本号 (如 1.2.3): ')).trim();
+    rl.close();
+  }
 
   // 简单校验版本号格式
   if (!/^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$/.test(version)) {
