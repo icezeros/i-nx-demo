@@ -13,6 +13,8 @@ import { spawn } from 'child_process';
 import inquirer from 'inquirer';
 import * as readline from 'readline';
 
+const BASE_BRANCH = process.env.RELEASE_BASE_BRANCH || 'main';
+
 const group = process.argv[2];
 if (!group) {
   console.error('用法: node scripts/release-with-confirm.mjs <group>');
@@ -81,6 +83,95 @@ function bumpVersion(current, type) {
       return null;
   }
   return `${maj}.${min}.${pat}`;
+}
+
+async function isGitRepo() {
+  try {
+    const { stdout } = await run(
+      'git',
+      ['rev-parse', '--is-inside-work-tree'],
+      { capture: true },
+    );
+    return stdout.trim() === 'true';
+  } catch {
+    return false;
+  }
+}
+
+async function isCleanWorkingTree() {
+  try {
+    const { stdout } = await run('git', ['status', '--porcelain'], {
+      capture: true,
+    });
+    return stdout.trim().length === 0;
+  } catch {
+    return false;
+  }
+}
+
+async function prepareReleaseBranch({ group, version }) {
+  const inRepo = await isGitRepo();
+  if (!inRepo) {
+    console.warn(
+      '当前目录不是 git 仓库，跳过自动创建发布分支和 Pull Request。',
+    );
+    return null;
+  }
+
+  const clean = await isCleanWorkingTree();
+  if (!clean) {
+    console.warn(
+      '工作区存在未提交修改，出于安全考虑将直接在当前分支上发版，不自动创建发布分支和 Pull Request。',
+    );
+    return null;
+  }
+
+  const branchName = `release/${group}/${version}`;
+  console.log(`\n创建发布分支: ${branchName}\n`);
+  const code = await run('git', ['checkout', '-b', branchName]);
+  if (code !== 0) {
+    console.warn(
+      '创建发布分支失败，将继续在当前分支上发版，请稍后手动创建分支和 Pull Request。',
+    );
+    return null;
+  }
+
+  return { branchName };
+}
+
+async function pushBranchAndCreatePr({ group, version, branchName }) {
+  if (!branchName) return;
+
+  console.log('\n推送发布分支到远程...\n');
+  const pushCode = await run('git', ['push', '-u', 'origin', branchName]);
+  if (pushCode !== 0) {
+    console.warn(
+      '推送发布分支到远程失败，请检查远程仓库配置并手动推送，然后在远程创建 Pull Request。',
+    );
+    return;
+  }
+
+  const title = `chore(release): ${group} v${version}`;
+  const body =
+    '自动生成的发布 PR。请在合并前确认 Changelog 与版本号是否符合预期。';
+
+  console.log('\n尝试通过 GitHub CLI 创建 Pull Request...\n');
+  const prCode = await run('gh', [
+    'pr',
+    'create',
+    '--title',
+    title,
+    '--body',
+    body,
+    '--base',
+    BASE_BRANCH,
+  ]);
+
+  if (prCode !== 0) {
+    console.warn(
+      '使用 GitHub CLI 创建 Pull Request 失败，请确认已安装 gh 并登录，或在远程仓库中手动创建 Pull Request。',
+    );
+  }
 }
 
 // 从 dry-run 输出中截取 Changelog 预览（Previewing an entry ... 到 Running target 之前）
@@ -187,6 +278,9 @@ async function main() {
     process.exit(1);
   }
 
+  // 在真正发版前，先创建发布分支，后续的版本号与 Changelog 提交都落在该分支上
+  const branchInfo = await prepareReleaseBranch({ group, version });
+
   console.log(`\n执行发版: --groups ${group} ${version}\n`);
   const exitCode = await run('npx', [
     'nx',
@@ -196,6 +290,15 @@ async function main() {
     version,
     '--yes',
   ]);
+
+  if (exitCode === 0 && branchInfo?.branchName) {
+    await pushBranchAndCreatePr({
+      group,
+      version,
+      branchName: branchInfo.branchName,
+    });
+  }
+
   process.exit(exitCode ?? 0);
 }
 
