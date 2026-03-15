@@ -193,6 +193,21 @@ function printChangelogPreview({ workspaceChangelog, projectChangelogs }) {
 }
 
 async function main() {
+  // 发版前要求工作区干净，否则无法创建发布分支和 PR，且易产生半途中断
+  const inRepo = await isGitRepo();
+  if (inRepo) {
+    const clean = await isCleanWorkingTree();
+    if (!clean) {
+      console.error(
+        '\n错误：工作区存在未提交修改。发版前请先 commit 或 stash，以保证：\n' +
+          '  1) 能创建发布分支 release/<group>/<version>\n' +
+          '  2) 发版完成后能自动 push 并创建 Pull Request。\n\n' +
+          '请执行: git status 查看修改，然后 git add/commit 或 git stash。\n',
+      );
+      process.exit(1);
+    }
+  }
+
   console.log(
     `\n正在计算建议版本（dry-run，使用 Nx Programmatic API）: group=${group}\n`,
   );
@@ -287,6 +302,9 @@ async function main() {
 
   console.log(
     `\n开始正式发版（Programmatic API）: group=${group}, version=${version}\n`,
+  );
+  console.log(
+    '（会依次：更新 package.json → 更新 package-lock.json → 生成 CHANGELOG，请勿中途 Ctrl+C）\n',
   );
 
   // 4）正式版本阶段（不再 dry-run），这里显式传入 specifier=version
