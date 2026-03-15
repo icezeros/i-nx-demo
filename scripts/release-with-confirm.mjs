@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 /**
- * 发版前确认流程：
- * 1. 执行 nx release --dry-run 得到建议版本
- * 2. 展示建议版本，支持直接确认或手动输入新版本
- * 3. 用最终版本执行 nx release
+ * 发版前确认 + 自动建分支 + 自动创建 PR。
+ *
+ * 新版实现基于 Nx Release 的 Programmatic API，而不是 shell 调用 `nx release`：
+ * - 先用 releaseVersion/releaseChangelog 做一次 dry-run，拿到「建议版本 + changelog 内容」用于交互确认
+ * - 用户确认最终版本号（可选 patch/minor/major、自定义）
+ * - 创建发布分支 `release/<group>/<version>`
+ * - 在该分支上用 Programmatic API 依次执行：version → changelog → publish
+ * - 最后自动 push 分支并用 `gh pr create` 创建 Pull Request
  *
  * 用法: node scripts/release-with-confirm.mjs <group>
  * 例:   node scripts/release-with-confirm.mjs platform-packages
@@ -12,6 +16,11 @@
 import { spawn } from 'child_process';
 import inquirer from 'inquirer';
 import * as readline from 'readline';
+import {
+  releaseChangelog,
+  releasePublish,
+  releaseVersion,
+} from 'nx/release/index.js';
 
 const BASE_BRANCH = process.env.RELEASE_BASE_BRANCH || 'main';
 
@@ -43,22 +52,6 @@ function run(cmd, args, opts = {}) {
     });
     child.on('error', reject);
   });
-}
-
-// 从 dry-run 输出中解析出建议的新版本号（第一个出现的 x.y.z）
-function parseSuggestedVersion(stdout) {
-  const m =
-    stdout.match(/(?:get new version|New version)\s+(\d+\.\d+\.\d+)/i) ||
-    stdout.match(/version\s+(\d+\.\d+\.\d+)\s+written/i);
-  return m ? m[1] : null;
-}
-
-// 从 dry-run 输出中解析当前版本号
-function parseCurrentVersion(stdout) {
-  const m =
-    stdout.match(/current version\s+(\d+\.\d+\.\d+)/i) ||
-    stdout.match(/version\s+(\d+\.\d+\.\d+)\s+already resolved/i);
-  return m ? m[1] : null;
 }
 
 // 基于当前版本计算 patch/minor/major 建议版本
@@ -173,59 +166,71 @@ async function pushBranchAndCreatePr({ group, version, branchName }) {
     );
   }
 }
+function getCurrentVersionFromProjects(projectsVersionData) {
+  const all = Object.values(projectsVersionData ?? {});
+  if (!all.length) return null;
+  return all[0]?.currentVersion ?? null;
+}
 
-// 从 dry-run 输出中截取 Changelog 预览（Previewing an entry ... 到 Running target 之前）
-function extractChangelogPreview(stdout) {
-  const start = stdout.indexOf('Previewing an entry in');
-  if (start === -1) return '';
-  const end =
-    stdout.indexOf('Running target nx-release-publish') !== -1
-      ? stdout.indexOf('Running target nx-release-publish')
-      : stdout.indexOf('NOTE: The "dryRun"');
-  if (end === -1) return stdout.slice(start).trim();
-  let block = stdout.slice(start, end).trim();
-  // 去掉行首的 "+ "，便于阅读
-  return block
-    .split('\n')
-    .map((line) => (line.startsWith('+ ') ? line.slice(2) : line))
-    .join('\n');
+function printChangelogPreview({ workspaceChangelog, projectChangelogs }) {
+  console.log('\n--- 生成的 Changelog 预览 ---\n');
+
+  if (workspaceChangelog?.contents) {
+    console.log(workspaceChangelog.contents);
+  } else if (projectChangelogs && Object.keys(projectChangelogs).length > 0) {
+    for (const [project, data] of Object.entries(projectChangelogs)) {
+      console.log(`## ${project}\n`);
+      // data 结构中通常有 contents 字段，这里做一下兜底
+      // @ts-ignore
+      console.log(data.contents ?? String(data));
+      console.log('\n');
+    }
+  } else {
+    console.log('（本次未生成任何 Changelog 内容）');
+  }
+
+  console.log('\n--- 确认版本 ---');
 }
 
 async function main() {
-  console.log(`\n正在计算建议版本（dry-run）: --groups ${group}\n`);
-  const { code, stdout } = await run(
-    'npx',
-    ['nx', 'release', '--groups', group, '--dry-run'],
-    { capture: true },
+  console.log(
+    `\n正在计算建议版本（dry-run，使用 Nx Programmatic API）: group=${group}\n`,
   );
-  if (code !== 0) {
-    console.error('dry-run 未成功，请先解决错误再发版。');
-    process.exit(code);
-  }
 
-  const suggested = parseSuggestedVersion(stdout);
+  // 1）用 Programmatic API 做一次 dry-run，拿到建议版本 + changelog 内容
+  const {
+    workspaceVersion: suggested,
+    projectsVersionData,
+    releaseGraph: dryRunReleaseGraph,
+  } = await releaseVersion({
+    groups: [group],
+    dryRun: true,
+    verbose: false,
+  });
+
   if (!suggested) {
-    console.error('未能从 dry-run 输出中解析出版本号，请手动执行:');
-    console.error(`  npx nx release --groups ${group} [版本号]`);
+    console.error('未能计算出建议版本，请检查 nx.json 中的 release 配置。');
     process.exit(1);
   }
 
-  const changelogPreview = extractChangelogPreview(stdout);
-  if (changelogPreview) {
-    console.log('\n--- 生成的 Changelog 预览 ---\n');
-    console.log(changelogPreview);
-    console.log('\n--- 确认版本 ---');
-  } else {
-    console.log('\n--- 确认版本 ---');
-  }
+  const changelogResult = await releaseChangelog({
+    groups: [group],
+    releaseGraph: dryRunReleaseGraph,
+    versionData: projectsVersionData,
+    version: suggested,
+    dryRun: true,
+    verbose: false,
+  });
 
-  const current = parseCurrentVersion(stdout);
+  printChangelogPreview(changelogResult);
+
+  const current = getCurrentVersionFromProjects(projectsVersionData);
   if (current) {
     console.log(`当前版本: ${current}`);
-    console.log(`建议版本(按提交计算): ${suggested}`);
+    console.log(`建议版本(按 conventional commits 计算): ${suggested}`);
   }
 
-  // 构建 inquirer 的 choices：{ name, value }，name 为展示文案
+  // 2）交互式选择最终版本号
   const choices = [];
   if (current) {
     const patch = bumpVersion(current, 'patch');
@@ -243,7 +248,6 @@ async function main() {
   choices.push({ name: '自定义版本号（输入）', value: '__custom__' });
   choices.push({ name: '取消', value: '__cancel__' });
 
-  // inquirer 13 的箭头列表类型为 select（不是 list），才能正确渲染选项
   const { choice } = await inquirer.prompt([
     {
       type: 'select',
@@ -278,28 +282,59 @@ async function main() {
     process.exit(1);
   }
 
-  // 在真正发版前，先创建发布分支，后续的版本号与 Changelog 提交都落在该分支上
+  // 3）创建发布分支，让后续所有改动都发生在该分支上
   const branchInfo = await prepareReleaseBranch({ group, version });
 
-  console.log(`\n执行发版: --groups ${group} ${version}\n`);
-  const exitCode = await run('npx', [
-    'nx',
-    'release',
-    '--groups',
-    group,
-    version,
-    '--yes',
-  ]);
+  console.log(
+    `\n开始正式发版（Programmatic API）: group=${group}, version=${version}\n`,
+  );
 
-  if (exitCode === 0 && branchInfo?.branchName) {
+  // 4）正式版本阶段（不再 dry-run），这里显式传入 specifier=version
+  const {
+    workspaceVersion,
+    projectsVersionData: finalProjectsVersionData,
+    releaseGraph,
+  } = await releaseVersion({
+    groups: [group],
+    specifier: version,
+    dryRun: false,
+    verbose: true,
+  });
+
+  // 5）正式生成并写入 changelog
+  await releaseChangelog({
+    groups: [group],
+    releaseGraph,
+    versionData: finalProjectsVersionData,
+    version: workspaceVersion,
+    dryRun: false,
+    verbose: true,
+  });
+
+  // 6）执行 publish（如果你的 nx release 配置里没有配置 publish，则这里会很快结束或跳过）
+  const publishResults = await releasePublish({
+    groups: [group],
+    releaseGraph,
+    dryRun: false,
+    verbose: true,
+  });
+
+  const allOk = Object.values(publishResults).every(
+    (result) => result.code === 0,
+  );
+
+  // 7）push 分支并创建 PR（只在版本/Changelog/Publish 全部成功时执行）
+  if (allOk && branchInfo?.branchName) {
     await pushBranchAndCreatePr({
       group,
-      version,
+      version: workspaceVersion ?? version,
       branchName: branchInfo.branchName,
     });
+  } else if (!allOk) {
+    console.warn('部分项目发布失败，已跳过自动创建 PR，请检查上面的日志。');
   }
 
-  process.exit(exitCode ?? 0);
+  process.exit(allOk ? 0 : 1);
 }
 
 main().catch((err) => {
