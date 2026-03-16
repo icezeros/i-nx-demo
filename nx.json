@@ -38,6 +38,7 @@
       "preVersionCommand": "npx nx run-many -t build"
     },
     "conventionalCommits": {
+      "useCommitScope": false,
       "types": {
         "feat": { "semverBump": "minor", "changelog": true },
         "fix": { "semverBump": "patch", "changelog": true },
