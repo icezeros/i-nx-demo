@@ -9,3 +9,6 @@ export function getAppName(): string {
 export function webApp(): string {
   return WEB_APP_NAME.toLowerCase();
 }
+
+/** App version for release demo. */
+export const WEB_APP_VERSION = '1.0.0';
