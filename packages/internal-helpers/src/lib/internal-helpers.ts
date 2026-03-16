@@ -1,4 +1,6 @@
 /** Internal helpers - return value is package name. */
+export const HELPERS_PACKAGE_NAME = 'internal-helpers';
+
 export function internalHelpers(): string {
-  return 'internal-helpers';
+  return HELPERS_PACKAGE_NAME;
 }
