@@ -4,3 +4,8 @@ export const MOBILE_APP_ID = 'mobile-app';
 export function mobileApp(): string {
   return MOBILE_APP_ID;
 }
+
+/** Get display name for release demo. */
+export function getMobileAppName(): string {
+  return MOBILE_APP_ID;
+}
