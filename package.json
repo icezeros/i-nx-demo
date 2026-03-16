@@ -6,8 +6,10 @@
     "prepare": "husky",
     "release:platform": "nx release --groups platform-packages",
     "release:platform:confirm": "node scripts/release-with-confirm.mjs platform-packages",
+    "release:platform:confirm:verbose": "node scripts/release-with-confirm.mjs platform-packages --verbose",
     "release:client": "nx release --groups client-applications",
     "release:client:confirm": "node scripts/release-with-confirm.mjs client-applications",
+    "release:client:confirm:verbose": "node scripts/release-with-confirm.mjs client-applications --verbose",
     "release:dry": "nx release --groups platform-packages,client-applications --dry-run",
     "local-registry": "nx local-registry"
   },

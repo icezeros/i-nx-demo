@@ -24,12 +24,16 @@ import {
 
 const BASE_BRANCH = process.env.RELEASE_BASE_BRANCH || 'main';
 
-const group = process.argv[2];
+// 解析参数：支持 --verbose / -v，group 为第一个非选项参数
+const args = process.argv.slice(2).filter((a) => a !== '--verbose' && a !== '-v');
+const verbose = process.argv.includes('--verbose') || process.argv.includes('-v');
+const group = args[0];
 if (!group) {
-  console.error('用法: node scripts/release-with-confirm.mjs <group>');
+  console.error('用法: node scripts/release-with-confirm.mjs <group> [--verbose]');
   console.error(
     '例:   node scripts/release-with-confirm.mjs platform-packages',
   );
+  console.error('      node scripts/release-with-confirm.mjs platform-packages --verbose  # 显示 Nx 底层输出');
   process.exit(1);
 }
 
@@ -220,7 +224,7 @@ async function main() {
   } = await releaseVersion({
     groups: [group],
     dryRun: true,
-    verbose: false,
+    verbose,
   });
 
   if (!suggested) {
@@ -234,7 +238,7 @@ async function main() {
     versionData: projectsVersionData,
     version: suggested,
     dryRun: true,
-    verbose: false,
+    verbose,
   });
 
   printChangelogPreview(changelogResult);
@@ -316,7 +320,7 @@ async function main() {
     groups: [group],
     specifier: version,
     dryRun: false,
-    verbose: true,
+    verbose,
   });
 
   // 5）正式生成并写入 changelog
@@ -326,7 +330,7 @@ async function main() {
     versionData: finalProjectsVersionData,
     version: workspaceVersion,
     dryRun: false,
-    verbose: true,
+    verbose,
   });
 
   // 6）执行 publish（如果你的 nx release 配置里没有配置 publish，则这里会很快结束或跳过）
@@ -334,7 +338,7 @@ async function main() {
     groups: [group],
     releaseGraph,
     dryRun: false,
-    verbose: true,
+    verbose,
   });
 
   const allOk = Object.values(publishResults).every(
