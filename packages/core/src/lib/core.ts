@@ -9,5 +9,5 @@ export function core(): string {
 
 /** Get current core version for release demo. */
 export function getCoreVersion(): string {
-  return CORE_VERSION;
+  return CORE_VERSION.trim();
 }
