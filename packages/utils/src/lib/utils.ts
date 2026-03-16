@@ -2,3 +2,9 @@
 export function utils(): string {
   return 'utils'.toLowerCase();
 }
+
+/** Capitalize first letter for display. */
+export function capitalize(s: string): string {
+  if (!s || s.length === 0) return s;
+  return s[0].toUpperCase() + s.slice(1);
+}
