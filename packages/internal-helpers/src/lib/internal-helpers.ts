@@ -7,5 +7,5 @@ export function internalHelpers(): string {
 
 /** Get package name for release demo. */
 export function getPackageName(): string {
-  return HELPERS_PACKAGE_NAME;
+  return String(HELPERS_PACKAGE_NAME);
 }
